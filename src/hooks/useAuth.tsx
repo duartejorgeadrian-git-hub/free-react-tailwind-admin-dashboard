@@ -20,10 +20,10 @@ const rolePermissions: Record<string, string[]> = {
   operador: ['view_alerts', 'view_citizen_profile'],
   supervisor: ['view_alerts', 'manage_alerts', 'view_audit', 'view_citizen_profile'],
   auditor: ['view_audit', 'export_audit'],
-  director: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users'],
-  admin_municipal: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'manage_config'],
-  superadmin: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'manage_config', 'manage_tenants'],
-  admin: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'manage_config', 'manage_tenants'],
+  director: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'view_citizen_profile'],
+  admin_municipal: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'manage_config', 'view_citizen_profile'],
+  superadmin: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'manage_config', 'manage_tenants', 'view_citizen_profile'],
+  admin: ['view_alerts', 'manage_alerts', 'view_audit', 'manage_users', 'manage_config', 'manage_tenants', 'view_citizen_profile'],
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

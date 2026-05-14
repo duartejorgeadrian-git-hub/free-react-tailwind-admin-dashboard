@@ -193,37 +193,41 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
 
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2 border-b pb-2">
-                <ImageIcon className="h-4 w-4 text-primary" /> Evidencia Multimedia
+                <ImageIcon className="h-4 w-4 text-primary" /> Evidencia Multimedia (SAMSUNG SOS)
               </h3>
 
               <div className="grid grid-cols-2 gap-2">
-                {mediaFiles.length > 0 ? (
-                  mediaFiles.map((file: any, idx: number) => {
-                    const isImg = file.type?.includes('image');
-                    const isVid = file.type?.includes('video');
-                    const isAud = file.type?.includes('audio');
-                    const fileUrl = `${API_URL}${file.url}`;
+                {alert.front_photo_url && (
+                  <div className="relative aspect-square bg-black rounded-lg overflow-hidden border group">
+                    <img src={`${API_URL}${alert.front_photo_url}`} className="w-full h-full object-cover" alt="frontal" />
+                    <div className="absolute top-1 left-1 bg-black/60 text-[10px] text-white px-1 rounded">FRONTAL</div>
+                    <a href={`${API_URL}${alert.front_photo_url}`} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ExternalLink className="text-white h-6 w-6" />
+                    </a>
+                  </div>
+                )}
+                {alert.rear_photo_url && (
+                  <div className="relative aspect-square bg-black rounded-lg overflow-hidden border group">
+                    <img src={`${API_URL}${alert.rear_photo_url}`} className="w-full h-full object-cover" alt="trasera" />
+                    <div className="absolute top-1 left-1 bg-black/60 text-[10px] text-white px-1 rounded">TRASERA</div>
+                    <a href={`${API_URL}${alert.rear_photo_url}`} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ExternalLink className="text-white h-6 w-6" />
+                    </a>
+                  </div>
+                )}
+                {alert.audio_url && (
+                  <div className="col-span-2 p-3 bg-muted rounded-lg border">
+                    <p className="text-xs font-medium mb-2 flex items-center gap-2">
+                      <Music className="h-3 w-3" /> AUDIO DE EMERGENCIA (AMB)
+                    </p>
+                    <audio src={`${API_URL}${alert.audio_url}`} controls className="w-full h-8" />
+                  </div>
+                )}
 
-                    return (
-                      <div key={idx} className="relative aspect-square bg-black rounded-lg overflow-hidden border group">
-                        {isImg && <img src={fileUrl} className="w-full h-full object-cover" alt="evidencia" />}
-                        {isVid && <div className="flex items-center justify-center h-full"><Video className="text-white" /></div>}
-                        {isAud && <div className="flex items-center justify-center h-full"><Music className="text-white" /></div>}
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                        >
-                          <ExternalLink className="text-white h-6 w-6" />
-                        </a>
-                      </div>
-                    );
-                  })
-                ) : (
+                {(!alert.front_photo_url && !alert.rear_photo_url && !alert.audio_url) && (
                   <div className="col-span-2 py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
                     <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">No se adjuntó evidencia</p>
+                    <p className="text-sm">No se adjuntó evidencia multimedia</p>
                   </div>
                 )}
               </div>

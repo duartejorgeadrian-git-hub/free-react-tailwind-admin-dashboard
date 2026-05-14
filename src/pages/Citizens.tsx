@@ -26,7 +26,7 @@ interface CitizenWithProfile {
 
 export default function Citizens() {
   const { hasPermission } = useAuth();
-  const { activeMunicipality } = useMunicipality();
+  const { selectedMunicipality } = useMunicipality();
   const [citizens, setCitizens] = useState<CitizenWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +36,7 @@ export default function Citizens() {
 
   useEffect(() => {
     fetchCitizens();
-  }, [activeMunicipality]);
+  }, [selectedMunicipality]);
 
   useEffect(() => {
     if (selectedCitizen) {
@@ -48,15 +48,22 @@ export default function Citizens() {
   const fetchCitizens = async () => {
     setLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
-      const municipalityParam = activeMunicipality ? `?municipalityId=${activeMunicipality.id}` : '';
-      const response = await fetch(`${apiUrl}/api/citizens${municipalityParam}`);
+      const serverIp = window.location.hostname === 'localhost' ? '10.0.0.66' : window.location.hostname;
+      const apiUrl = `http://${serverIp}:3001`;
+
+      console.log('Intentando conectar con:', `${apiUrl}/api/citizens?municipalityId=${selectedMunicipality?.id}`);
+
+      const response = await fetch(`${apiUrl}/api/citizens?municipalityId=${selectedMunicipality?.id || ''}`);
       const data = await response.json();
 
-      // La API local debería devolver los ciudadanos con sus perfiles unidos
-      setCitizens(data);
+      if (Array.isArray(data)) {
+        console.log('Ciudadanos recibidos:', data.length);
+        setCitizens(data);
+      } else {
+        setCitizens([]);
+      }
     } catch (error) {
-      console.error('Error fetching citizens:', error);
+      console.error('Error de conexión con el servidor:', error);
     } finally {
       setLoading(false);
     }

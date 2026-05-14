@@ -229,7 +229,7 @@ export const IncidentMap = ({
                         </div>
                         <p className="text-xs text-slate-700 m-0 mb-2 line-clamp-2">{alert.address}</p>
                         <div className="text-[9px] font-mono bg-slate-100 p-1.5 rounded text-slate-500 text-center">
-                          {alert.latitude.toFixed(4)}, {alert.longitude.toFixed(4)}
+                          {Number(alert.latitude).toFixed(4)}, {Number(alert.longitude).toFixed(4)}
                         </div>
                       </div>
                     </Popup>

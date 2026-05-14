@@ -49,12 +49,24 @@ export const useRealtimeAlerts = (props?: UseRealtimeAlertsProps) => {
   useEffect(() => {
     fetchActiveAlerts();
 
-    // Conectar al Socket de nuestro servidor Node.js
-    const socket = io(API_URL);
+    // Conectar al Socket de nuestro servidor Node.js con máxima compatibilidad
+    const socket = io(API_URL, {
+      transports: ['polling'], // Forzamos polling para saltar bloqueos de firewall/browser
+      upgrade: true,           // Permitimos que suba a websocket si puede
+      reconnectionAttempts: 20,
+      reconnectionDelay: 1000,
+      withCredentials: true,
+      autoConnect: true
+    });
 
     socket.on('connect', () => {
       setIsConnected(true);
-      console.log('Conectado al servidor de alertas (XAMPP)');
+      console.log('✅ Conectado al servidor de alertas');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ Error de conexión socket:', error);
+      setIsConnected(false);
     });
 
     // Escuchar nuevas alertas
