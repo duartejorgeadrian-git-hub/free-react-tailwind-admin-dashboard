@@ -1,3 +1,12 @@
+export type AppRole =
+  | 'operador'
+  | 'supervisor'
+  | 'auditor'
+  | 'director'
+  | 'admin_municipal'
+  | 'superadmin'
+  | 'admin';
+
 export interface Municipality {
   id: string;
   name: string;
@@ -15,7 +24,10 @@ export interface Alert {
   address?: string;
   description?: string;
   createdAt: string;
+  resolvedAt?: string;
   municipalityId: string;
+  nombre?: string;
+  apellido?: string;
 }
 
 export interface MapCamera {
@@ -26,11 +38,14 @@ export interface MapCamera {
   address?: string;
   is_active: boolean;
   distance?: number;
+  code?: string;
 }
 
 export interface UserProfile {
   id: string;
   user_id: string;
+  username?: string;
+  email?: string;
   nombre: string;
   apellido: string;
   dni: string;
@@ -39,4 +54,34 @@ export interface UserProfile {
   nivel_ciudadano: number;
   puntos_pcc: number;
   verificado: boolean;
+  municipalityId?: string;
+  role?: AppRole;
+}
+
+export interface Citizen {
+  id: string;
+  dni: string;
+  municipalityId: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface CitizenProfile {
+  id: string;
+  citizenId: string;
+  nombre: string;
+  apellido: string;
+  photoUrl?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  riskLevel: 'alto' | 'medio' | 'bajo';
+  createdAt: string;
+}
+
+export interface CourseWithProgress {
+  id: string;
+  title: string;
+  progress: number;
+  status: 'completed' | 'in_progress' | 'not_started';
 }

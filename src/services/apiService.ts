@@ -33,7 +33,41 @@ export const apiService = {
   },
 
   async getCitizenCourses(citizenId: string) {
-    // Por ahora retornamos vacio o mock hasta tener la tabla en MySQL
-    return { success: true, data: [] };
+    try {
+      const response = await fetch(`${API_URL}/api/citizens/${citizenId}/courses`);
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error fetching citizen courses:', error);
+      return { success: false, data: [] };
+    }
+  },
+
+  async getCitizenBadges(citizenId: string) {
+    try {
+      const response = await fetch(`${API_URL}/api/citizens/${citizenId}/badges`);
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error fetching citizen badges:', error);
+      return { success: false, data: [] };
+    }
+  },
+
+  async updateAlertStatus(alertId: string, status: string, userId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await fetch(`${API_URL}/api/alerts/${alertId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId
+        },
+        body: JSON.stringify({ status }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating alert status:', error);
+      return { success: false };
+    }
   }
 };

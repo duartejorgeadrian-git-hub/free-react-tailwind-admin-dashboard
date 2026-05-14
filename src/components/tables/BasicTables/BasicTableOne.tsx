@@ -4,6 +4,7 @@ import {
   TableCell,
   TableHeader,
   TableRow,
+  TableHead,
 } from "../../ui/table";
 
 import Badge from "../../ui/badge/Badge";
@@ -117,36 +118,31 @@ export default function BasicTableOne() {
           {/* Table Header */}
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
             <TableRow>
-              <TableCell
-                isHeader
+              <TableHead
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 User
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Project Name
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Team
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Status
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Budget
-              </TableCell>
+              </TableHead>
             </TableRow>
           </TableHeader>
 

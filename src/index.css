@@ -2,6 +2,7 @@
 layer(base);
 
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -163,6 +164,36 @@ layer(base);
   --z-index-9999: 9999;
   --z-index-99999: 99999;
   --z-index-999999: 999999;
+
+  /* Shadcn UI Variables */
+  --color-background: #ffffff;
+  --color-foreground: #020817;
+  --color-card: #ffffff;
+  --color-card-foreground: #020817;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #020817;
+  --color-primary: #465fff;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f1f5f9;
+  --color-secondary-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #0f172a;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #465fff;
+  --color-sidebar: #f8fafc;
+  --color-sidebar-foreground: #0f172a;
+  --color-sidebar-primary: #0f172a;
+  --color-sidebar-primary-foreground: #f8fafc;
+  --color-sidebar-accent: #f1f5f9;
+  --color-sidebar-accent-foreground: #0f172a;
+  --color-sidebar-border: #e2e8f0;
+  --color-sidebar-ring: #cbd5e1;
+  --radius: 0.5rem;
 }
 
 /*

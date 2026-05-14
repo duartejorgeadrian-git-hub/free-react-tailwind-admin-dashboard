@@ -4,6 +4,7 @@ import {
   TableCell,
   TableHeader,
   TableRow,
+  TableHead,
 } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 
@@ -127,30 +128,26 @@ export default function RecentOrders() {
           {/* Table Header */}
           <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
             <TableRow>
-              <TableCell
-                isHeader
+              <TableHead
                 className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Products
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Category
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Price
-              </TableCell>
-              <TableCell
-                isHeader
+              </TableHead>
+              <TableHead
                 className="py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
                 Status
-              </TableCell>
+              </TableHead>
             </TableRow>
           </TableHeader>
 
