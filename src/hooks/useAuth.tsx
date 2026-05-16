@@ -12,6 +12,7 @@ interface AuthContextType {
   signIn: (username: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateAuthData: (data: { user?: any; profile?: any; role?: AppRole }) => void;
 }
 
 export type { AppRole };
@@ -28,7 +29,8 @@ const rolePermissions: Record<string, string[]> = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
+const rawUrl = import.meta.env.VITE_API_URL || '';
+const API_URL = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<{ id: string; username: string; role: string } | null>(null);
@@ -115,7 +117,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProfile = async () => {
-    // Implementar si hay endpoint de perfil
+    if (!user?.id) return;
+    try {
+      console.log('🔄 Sincronizando perfil con el servidor...');
+      // Añadimos un pequeño delay para asegurar que el server actualizó la DB
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const response = await fetch(`${API_URL}/api/users`);
+      const users = await response.json();
+      const me = users.find((u: any) => u.id === user.id);
+
+      if (me) {
+        console.log('✅ Datos recuperados:', me.nombre, me.apellido);
+        const updatedProfile = {
+          ...me,
+          nombre: me.nombre || '',
+          apellido: me.apellido || ''
+        };
+
+        setProfile(updatedProfile);
+        setRole(me.role as AppRole);
+
+        const savedAuth = localStorage.getItem('auth_session');
+        if (savedAuth) {
+          const session = JSON.parse(savedAuth);
+          session.profile = updatedProfile;
+          session.user.role = me.role;
+          localStorage.setItem('auth_session', JSON.stringify(session));
+        }
+      }
+    } catch (e) {
+      console.error('Error refreshing profile:', e);
+    }
+  };
+
+  const updateAuthData = (data: { user?: any; profile?: any; role?: AppRole }) => {
+    const savedAuth = localStorage.getItem('auth_session');
+    let session = savedAuth ? JSON.parse(savedAuth) : {};
+
+    if (data.user) {
+      setUser(data.user);
+      session.user = data.user;
+    }
+    if (data.profile) {
+      setProfile(data.profile);
+      session.profile = data.profile;
+    }
+    if (data.role) {
+      setRole(data.role);
+    }
+
+    localStorage.setItem('auth_session', JSON.stringify(session));
   };
 
   return (
@@ -131,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         refreshProfile,
+        updateAuthData,
       }}
     >
       {children}

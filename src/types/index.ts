@@ -12,6 +12,10 @@ export interface Municipality {
   name: string;
   province: string;
   code: string;
+  latitude?: number;
+  longitude?: number;
+  primary_color?: string;
+  logo_url?: string;
 }
 
 export interface Alert {
@@ -28,6 +32,11 @@ export interface Alert {
   municipalityId: string;
   nombre?: string;
   apellido?: string;
+  dni?: string;
+  telefono?: string;
+  front_photo_url?: string;
+  rear_photo_url?: string;
+  audio_url?: string;
 }
 
 export interface MapCamera {
@@ -39,6 +48,7 @@ export interface MapCamera {
   is_active: boolean;
   distance?: number;
   code?: string;
+  feed_url?: string;
 }
 
 export interface UserProfile {

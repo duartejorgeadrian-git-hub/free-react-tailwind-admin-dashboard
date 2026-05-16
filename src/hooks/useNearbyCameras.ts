@@ -34,7 +34,9 @@ export const useNearbyCameras = ({
     const fetchCameras = async () => {
       setLoading(true);
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
+        const rawUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
+
         let url = `${apiUrl}/api/cameras`;
         if (municipalityId) {
           url += `?municipalityId=${municipalityId}`;
@@ -49,7 +51,8 @@ export const useNearbyCameras = ({
             .map(cam => ({
               ...cam,
               latitude: Number(cam.latitude),
-              longitude: Number(cam.longitude)
+              longitude: Number(cam.longitude),
+              feed_url: cam.feed_url
             }))
             .filter(cam => !isNaN(cam.latitude) && !isNaN(cam.longitude));
 
@@ -64,7 +67,7 @@ export const useNearbyCameras = ({
             const lng = Number(cam.longitude);
             if (isNaN(lat) || isNaN(lng)) return null;
             const dist = calculateDistance(latitude, longitude, lat, lng);
-            return { ...cam, latitude: lat, longitude: lng, distance: dist };
+            return { ...cam, latitude: lat, longitude: lng, distance: dist, feed_url: cam.feed_url };
           })
           .filter((cam): cam is MapCamera => cam !== null && cam.is_active !== false);
 

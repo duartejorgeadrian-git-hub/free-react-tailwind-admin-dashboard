@@ -63,7 +63,22 @@ function MapController({
   center?: { lat: number; lng: number }
 }) {
   const map = useMap();
+  const [lastCenter, setLastCenter] = useState<string>('');
 
+  // Efecto 1: Reaccionar al cambio de CENTRO (Municipio seleccionado)
+  useEffect(() => {
+    if (center) {
+      const centerKey = `${center.lat},${center.lng}`;
+      if (centerKey !== lastCenter) {
+        setLastCenter(centerKey);
+        map.flyTo([center.lat, center.lng], 13, {
+          duration: 1.5
+        });
+      }
+    }
+  }, [center, map, lastCenter]);
+
+  // Efecto 2: Reaccionar a alertas o selección individual
   useEffect(() => {
     if (selectedAlertId) {
       const selected = alerts.find(a => a.id === selectedAlertId);
@@ -74,19 +89,13 @@ function MapController({
         });
       }
     } else if (alerts.length > 0) {
-      // If no alert is selected but there are alerts, fit bounds to all alerts
+      // Fit bounds to alerts ONLY if we have some
       const bounds = L.latLngBounds(alerts.filter(a => a.latitude && a.longitude).map(a => [a.latitude, a.longitude]));
       if (bounds.isValid()) {
         map.fitBounds(bounds, { padding: [50, 50] });
       }
-    } else if (center) {
-      // If no alerts, go to municipality center
-      map.setView([center.lat, center.lng], 13, {
-        animate: true,
-        duration: 1
-      });
     }
-  }, [selectedAlertId, alerts, map, center]);
+  }, [selectedAlertId, alerts, map]);
 
   return null;
 }
@@ -201,8 +210,8 @@ export const IncidentMap = ({
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         <LayersControl position="topright">

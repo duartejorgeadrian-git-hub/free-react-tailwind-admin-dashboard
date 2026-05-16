@@ -1,6 +1,8 @@
 import type { Municipality, Alert } from '@/types';
 
-const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
+const rawUrl = import.meta.env.VITE_API_URL || '';
+// Limpieza de seguridad por si el .env tiene errores de formato
+const API_URL = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
 
 export const apiService = {
   async getMunicipalities(): Promise<{ success: boolean; data: Municipality[] }> {
@@ -68,6 +70,51 @@ export const apiService = {
     } catch (error) {
       console.error('Error updating alert status:', error);
       return { success: false };
+    }
+  },
+
+  async getUsers(): Promise<any[]> {
+    try {
+      const response = await fetch(`${API_URL}/api/users`);
+      if (!response.ok) throw new Error('Error al cargar usuarios');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
+  },
+
+  async deleteUser(userId: string, currentUserId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${API_URL}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-user-id': currentUserId
+        }
+      });
+      const data = await response.json();
+      if (!response.ok) return { success: false, error: data.error };
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  async updateUser(userId: string, data: any, currentUserId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${API_URL}/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId
+        },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!response.ok) return { success: false, error: result.error };
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   }
 };

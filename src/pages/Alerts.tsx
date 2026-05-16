@@ -11,12 +11,16 @@ import {
   Archive,
 } from 'lucide-react';
 import { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts';
+import { useMunicipality } from '@/context/MunicipalityContext';
 import { AlertsList } from '@/components/alerts/AlertsList';
 import { AlertDetailPanel } from '@/components/alerts/AlertDetailPanel';
 import type { Alert } from '@/types';
 
 export default function Alerts() {
-  const { alerts, loading } = useRealtimeAlerts();
+  const { selectedMunicipality } = useMunicipality();
+  const { alerts, loading } = useRealtimeAlerts({
+    municipalityId: selectedMunicipality?.id
+  });
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
 
   // Evita que quede abierto el detalle si la alerta deja de estar seleccionada

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,7 +9,8 @@ import {
   Search,
   UserCheck,
   AlertTriangle,
-  Shield
+  Shield,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/apiService';
@@ -34,6 +36,10 @@ export default function Citizens() {
   const [courses, setCourses] = useState<CourseWithProgress[]>([]);
   const [badges, setBadges] = useState<any[]>([]);
 
+  // Limpieza de URL (Blindaje Fullstack)
+  const rawUrl = import.meta.env.VITE_API_URL || '';
+  const API_URL = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
+
   useEffect(() => {
     fetchCitizens();
   }, [selectedMunicipality]);
@@ -48,12 +54,9 @@ export default function Citizens() {
   const fetchCitizens = async () => {
     setLoading(true);
     try {
-      const serverIp = window.location.hostname === 'localhost' ? '10.0.0.66' : window.location.hostname;
-      const apiUrl = `http://${serverIp}:3001`;
+      console.log('Intentando conectar con:', `${API_URL}/api/citizens?municipalityId=${selectedMunicipality?.id || ''}`);
 
-      console.log('Intentando conectar con:', `${apiUrl}/api/citizens?municipalityId=${selectedMunicipality?.id}`);
-
-      const response = await fetch(`${apiUrl}/api/citizens?municipalityId=${selectedMunicipality?.id || ''}`);
+      const response = await fetch(`${API_URL}/api/citizens?municipalityId=${selectedMunicipality?.id || ''}`);
       const data = await response.json();
 
       if (Array.isArray(data)) {
@@ -80,6 +83,25 @@ export default function Citizens() {
     const res = await apiService.getCitizenBadges(citizenId);
     if (res.success) {
       setBadges(res.data);
+    }
+  };
+
+  const handleDeleteCitizen = async (citizenId: string) => {
+    if (!window.confirm('¿Está seguro de que desea eliminar permanentemente a este ciudadano?')) {
+      return;
+    }
+
+    try {
+      const res = await apiService.deleteUser(citizenId, currentUser?.id || '');
+      if (res.success) {
+        toast.success('Ciudadano eliminado correctamente');
+        setSelectedCitizen(null);
+        fetchCitizens();
+      } else {
+        toast.error(res.error || 'Error al eliminar ciudadano');
+      }
+    } catch (error) {
+      toast.error('Error de conexión al eliminar');
     }
   };
 
@@ -246,11 +268,24 @@ export default function Citizens() {
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          {item.profile && (
-                            <Badge variant={getRiskBadgeVariant(item.profile.riskLevel)} className="text-xs">
-                              {item.profile.riskLevel}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {item.profile && (
+                              <Badge variant={getRiskBadgeVariant(item.profile.riskLevel)} className="text-xs">
+                                {item.profile.riskLevel}
+                              </Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCitizen(item.citizen.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                           {item.alertCount > 0 && (
                             <span className="text-xs text-muted-foreground">
                               {item.alertCount} alertas

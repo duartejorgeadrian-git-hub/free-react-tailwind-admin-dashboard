@@ -17,6 +17,9 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNearbyCameras } from '@/hooks/useNearbyCameras';
+import { useAuth } from '@/hooks/useAuth';
+import type { MapCamera } from '@/types';
 
 
 import { Button } from '@/components/ui/button';
@@ -31,15 +34,23 @@ interface AlertDetailPanelProps {
 }
 
 export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProps) => {
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeFeed, setActiveFeed] = useState<string | null>(null);
   const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
 
-  // Videos de ejemplo para la simulación
+  const { cameras: nearbyCameras } = useNearbyCameras({
+    latitude: Number(alert.latitude),
+    longitude: Number(alert.longitude),
+    limit: 4,
+    municipalityId: alert.municipality_id
+  });
+
+  // Videos de ejemplo de respaldo si la cámara no tiene feed_url
   const sampleVideos = [
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+    'https://www.w3schools.com/html/mov_bbb.mp4',
+    'https://vjs.zencdn.net/v/oceans.mp4',
+    'https://www.w3schools.com/html/movie.mp4'
   ];
 
   const handleUpdateStatus = async (newStatus: string) => {
@@ -47,7 +58,10 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
     try {
       const response = await fetch(`${API_URL}/api/alerts/${alert.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser?.id || ''
+        },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -110,7 +124,11 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
   };
 
-  const mediaFiles = alert.media_urls ? JSON.parse(alert.media_urls) : [];
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-sm p-4">
@@ -172,22 +190,36 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
               </div>
 
               <h3 className="font-semibold flex items-center gap-2 border-b pb-2 mt-6">
-                <Video className="h-4 w-4 text-primary" /> Cámaras Cercanas (SIM)
+                <Video className="h-4 w-4 text-primary" /> Cámaras Municipales en la Zona
               </h3>
               <div className="grid grid-cols-1 gap-2">
-                {[1, 2, 3].map((cam, idx) => (
-                  <div key={cam} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm border hover:border-primary/50 transition-colors">
-                    <span className="flex items-center gap-2"><Video className="h-4 w-4 text-muted-foreground" /> Cámara {cam} - Zona {idx + 1}</span>
+                {nearbyCameras.length > 0 ? nearbyCameras.map((cam: MapCamera, idx) => (
+                  <div key={cam.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm border hover:border-primary/50 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Video className="h-4 w-4 text-muted-foreground" />
+                        {cam.code || cam.name}
+                      </span>
+                      {cam.distance && (
+                        <span className="text-[10px] text-muted-foreground ml-6">
+                          A {Math.round(cam.distance)} metros
+                        </span>
+                      )}
+                    </div>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="text-xs text-blue-600 hover:text-blue-700 font-bold"
-                      onClick={() => setActiveFeed(sampleVideos[idx % sampleVideos.length])}
+                      onClick={() => setActiveFeed(cam.feed_url || sampleVideos[idx % sampleVideos.length])}
                     >
                       <Play className="h-3 w-3 mr-1" /> VER FEED
                     </Button>
                   </div>
-                ))}
+                )) : (
+                  <div className="p-4 text-center text-xs text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">
+                    No hay cámaras detectadas cerca de este incidente
+                  </div>
+                )}
               </div>
             </div>
 
@@ -199,18 +231,18 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
               <div className="grid grid-cols-2 gap-2">
                 {alert.front_photo_url && (
                   <div className="relative aspect-square bg-black rounded-lg overflow-hidden border group">
-                    <img src={`${API_URL}${alert.front_photo_url}`} className="w-full h-full object-cover" alt="frontal" />
+                    <img src={getImageUrl(alert.front_photo_url)} className="w-full h-full object-cover" alt="frontal" />
                     <div className="absolute top-1 left-1 bg-black/60 text-[10px] text-white px-1 rounded">FRONTAL</div>
-                    <a href={`${API_URL}${alert.front_photo_url}`} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <a href={getImageUrl(alert.front_photo_url)} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <ExternalLink className="text-white h-6 w-6" />
                     </a>
                   </div>
                 )}
                 {alert.rear_photo_url && (
                   <div className="relative aspect-square bg-black rounded-lg overflow-hidden border group">
-                    <img src={`${API_URL}${alert.rear_photo_url}`} className="w-full h-full object-cover" alt="trasera" />
+                    <img src={getImageUrl(alert.rear_photo_url)} className="w-full h-full object-cover" alt="trasera" />
                     <div className="absolute top-1 left-1 bg-black/60 text-[10px] text-white px-1 rounded">TRASERA</div>
-                    <a href={`${API_URL}${alert.rear_photo_url}`} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <a href={getImageUrl(alert.rear_photo_url)} target="_blank" rel="noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <ExternalLink className="text-white h-6 w-6" />
                     </a>
                   </div>
@@ -220,7 +252,7 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
                     <p className="text-xs font-medium mb-2 flex items-center gap-2">
                       <Music className="h-3 w-3" /> AUDIO DE EMERGENCIA (AMB)
                     </p>
-                    <audio src={`${API_URL}${alert.audio_url}`} controls className="w-full h-8" />
+                    <audio src={getImageUrl(alert.audio_url)} controls className="w-full h-8" />
                   </div>
                 )}
 
@@ -235,26 +267,41 @@ export const AlertDetailPanel = ({ alert, onAlertUpdated }: AlertDetailPanelProp
           </div>
         </ScrollArea>
 
-        {/* Modal de Cámara en Vivo */}
-        <Dialog open={!!activeFeed} onOpenChange={() => setActiveFeed(null)}>
-          <DialogContent className="max-w-3xl bg-black border-none p-0 overflow-hidden">
-            <DialogHeader className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
-              <DialogTitle className="text-white flex items-center gap-2">
-                <Video className="h-5 w-5 text-red-500 animate-pulse" />
-                TRANSMISIÓN EN VIVO - CÁMARA MUNICIPAL
-              </DialogTitle>
-            </DialogHeader>
-            <video
-              src={activeFeed || ''}
-              autoPlay
-              controls
-              className="w-full aspect-video"
-            />
-            <div className="absolute bottom-4 right-4 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold animate-pulse">
-              REC ● LIVE
+        {/* Modal de Cámara en Vivo (SOLUCIÓN ROBUSTA) */}
+        {activeFeed && (
+          <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center animate-in fade-in duration-300">
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center z-10">
+              <h3 className="text-white font-bold flex items-center gap-2 uppercase tracking-widest text-sm">
+                <span className="w-2 h-2 bg-red-600 rounded-full animate-ping"></span>
+                LIVE - CÁMARA MUNICIPAL
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setActiveFeed(null)}
+                className="text-white hover:bg-white/20 rounded-full h-10 w-10"
+              >
+                <X className="h-8 w-8" />
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+
+            <div className="w-full max-w-5xl aspect-video bg-black shadow-2xl relative">
+              <video
+                src={activeFeed}
+                autoPlay
+                controls
+                className="w-full h-full"
+              />
+              <div className="absolute bottom-4 right-4 bg-red-600 text-white px-3 py-1 rounded text-xs font-bold animate-pulse">
+                REC ● 4K
+              </div>
+            </div>
+
+            <div className="mt-4 text-slate-500 font-mono text-[10px] uppercase tracking-tighter">
+              Sistema de Monitoreo Urbano - Municipalidad de Río Gallegos
+            </div>
+          </div>
+        )}
 
         <div className="p-4 border-t bg-muted/20 flex gap-3">
           {alert.status !== 'resuelta' && (

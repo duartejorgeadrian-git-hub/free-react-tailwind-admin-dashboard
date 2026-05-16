@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import type { Alert } from '@/types';
 
-const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
+const rawApiUrl = import.meta.env.VITE_API_URL || '';
+const rawSocketUrl = import.meta.env.VITE_SOCKET_URL || '';
+
+// Limpieza de seguridad: extraemos solo la primera parte si vienen pegadas
+const API_URL = (rawApiUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
+const SOCKET_URL = (rawSocketUrl.split(' ')[0] || API_URL).trim();
 
 interface UseRealtimeAlertsProps {
   onNewAlert?: (alert: Alert) => void;
@@ -50,11 +55,10 @@ export const useRealtimeAlerts = (props?: UseRealtimeAlertsProps) => {
     fetchActiveAlerts();
 
     // Conectar al Socket de nuestro servidor Node.js con máxima compatibilidad
-    const socket = io(API_URL, {
-      transports: ['polling'], // Forzamos polling para saltar bloqueos de firewall/browser
-      upgrade: true,           // Permitimos que suba a websocket si puede
-      reconnectionAttempts: 20,
-      reconnectionDelay: 1000,
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'], // Intentar websocket primero
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
       withCredentials: true,
       autoConnect: true
     });

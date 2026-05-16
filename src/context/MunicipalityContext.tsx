@@ -19,15 +19,28 @@ export const MunicipalityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const loadMunicipalities = async () => {
       setLoading(true);
-      const res = await apiService.getMunicipalities();
-      if (res.success && res.data.length > 0) {
-        setMunicipalities(res.data);
-        // Intentar recuperar del localStorage o usar el primero
-        const savedId = localStorage.getItem('selectedMunicipalityId');
-        const saved = res.data.find((m: Municipality) => m.id === savedId);
-        setSelectedMunicipality(saved || res.data[0]);
+      try {
+        const res = await apiService.getMunicipalities();
+        if (res && res.success && Array.isArray(res.data)) {
+          setMunicipalities(res.data);
+
+          const savedId = localStorage.getItem('selectedMunicipalityId');
+          const currentMuni = res.data.find((m: Municipality) => m.id === savedId);
+
+          // LÓGICA DE AUTOLIMPIEZA: Si el ID guardado no existe en la DB actual, resetear al primero válido
+          if (!currentMuni && res.data.length > 0) {
+            console.log('🔄 Detectada desincronización de ID. Auto-reparando...');
+            setSelectedMunicipality(res.data[0]);
+            localStorage.setItem('selectedMunicipalityId', res.data[0].id);
+          } else {
+            setSelectedMunicipality(currentMuni || res.data[0] || null);
+          }
+        }
+      } catch (error) {
+        console.error('Error sincronizando municipios:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadMunicipalities();
   }, []);
@@ -35,6 +48,13 @@ export const MunicipalityProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (selectedMunicipality) {
       localStorage.setItem('selectedMunicipalityId', selectedMunicipality.id);
+
+      // Aplicar color primario dinámico a todo el sistema (Variable CSS)
+      const color = selectedMunicipality.primary_color || '#1e40af';
+      document.documentElement.style.setProperty('--primary', color);
+
+      // También podemos aplicar una versión clara para fondos si fuera necesario
+      // document.documentElement.style.setProperty('--primary-light', `${color}20`);
     }
   }, [selectedMunicipality]);
 

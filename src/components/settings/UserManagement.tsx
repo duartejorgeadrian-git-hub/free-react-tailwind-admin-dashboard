@@ -20,6 +20,7 @@ import {
 import { useAuth, type AppRole } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { apiService } from '@/services/apiService';
 
 interface UserWithRole {
   id: string;
@@ -53,18 +54,22 @@ const roleDescriptions: Record<string, string> = {
   soporte: 'Acceso de soporte técnico al sistema',
 };
 
-const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
-
+// Se usa apiService para evitar problemas de IP mal formada
 export function UserManagement() {
-  const { hasAnyRole, user: currentUser } = useAuth();
+  const { hasAnyRole, user: currentUser, refreshProfile } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
-  // Estado para Diálogo de Rol
+  // Estado para Diálogo de Edición
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
-  const [selectedRole, setSelectedRole] = useState<AppRole>('operador');
+  const [editFormData, setEditFormData] = useState({
+    nombre: '',
+    apellido: '',
+    email: '',
+    role: 'operador' as AppRole
+  });
 
   // Estado para Diálogo de Creación
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -89,9 +94,7 @@ export function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/users`);
-      if (!response.ok) throw new Error('Error al cargar usuarios');
-      const data = await response.json();
+      const data = await apiService.getUsers();
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -105,6 +108,10 @@ export function UserManagement() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Usamos currentUser?.id para la auditoría en el backend
+      const rawUrl = import.meta.env.VITE_API_URL || '';
+      const API_URL = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
+
       const response = await fetch(`${API_URL}/api/auth/signup`, {
         method: 'POST',
         headers: {
@@ -131,27 +138,28 @@ export function UserManagement() {
     }
   };
 
-  const handleAssignRole = async () => {
+  const handleUpdateUser = async () => {
     if (!editingUser) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/users/${editingUser.id}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.id || ''
-        },
-        body: JSON.stringify({ role: selectedRole }),
-      });
+      const res = await apiService.updateUser(editingUser.id, editFormData, currentUser?.id || '');
 
-      if (!response.ok) throw new Error('Error al asignar rol');
+      if (!res.success) throw new Error(res.error || 'Error al actualizar usuario');
 
-      toast.success(`Rol "${roleLabels[selectedRole]}" asignado correctamente`);
+      toast.success(`Usuario actualizado correctamente`);
+
+      // Si el usuario editado es el mismo que está logueado, actualizamos su sesión local
+      if (editingUser.id === currentUser?.id) {
+        await refreshProfile();
+        // Forzamos una recarga de la página para que el Header lea el localStorage actualizado
+        window.location.reload();
+      }
+
       setEditingUser(null);
       fetchUsers();
-    } catch (error) {
-      console.error('Error assigning role:', error);
-      toast.error('Error al asignar rol');
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast.error(error.message);
     }
   };
 
@@ -160,22 +168,12 @@ export function UserManagement() {
       return;
     }
 
-    try {
-      const response = await fetch(`${API_URL}/api/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'x-user-id': currentUser?.id || ''
-        }
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Error al eliminar usuario');
-
+    const res = await apiService.deleteUser(userId, currentUser?.id || '');
+    if (res.success) {
       toast.success('Usuario eliminado correctamente');
       fetchUsers();
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
-      toast.error(error.message || 'Error al eliminar usuario');
+    } else {
+      toast.error(res.error || 'Error al eliminar usuario');
     }
   };
 
@@ -316,12 +314,17 @@ export function UserManagement() {
                           size="sm"
                           onClick={() => {
                             setEditingUser(user);
-                            setSelectedRole(user.role || 'operador');
+                            setEditFormData({
+                              nombre: user.nombre || '',
+                              apellido: user.apellido || '',
+                              email: user.email || '',
+                              role: user.role || 'operador'
+                            });
                           }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        {user.id !== currentUser?.id && (
+                        {user.id !== currentUser?.id && user.role !== 'superadmin' && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -342,29 +345,52 @@ export function UserManagement() {
         </CardContent>
       </Card>
 
-      {/* DIALOGO: ASIGNAR ROL */}
+      {/* DIALOGO: EDITAR USUARIO */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Asignar Rol</DialogTitle>
+            <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogDescription>
+              Modifique los datos del perfil y el rol asignado.
+            </DialogDescription>
           </DialogHeader>
           {editingUser && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                <Avatar>
-                  <AvatarFallback>
-                    {getInitials(editingUser.nombre, editingUser.apellido)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{editingUser.nombre} {editingUser.apellido}</p>
-                  <p className="text-sm text-muted-foreground">@{editingUser.username}</p>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nombre">Nombre</Label>
+                  <Input
+                    id="edit-nombre"
+                    value={editFormData.nombre}
+                    onChange={(e) => setEditFormData({...editFormData, nombre: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-apellido">Apellido</Label>
+                  <Input
+                    id="edit-apellido"
+                    value={editFormData.apellido}
+                    onChange={(e) => setEditFormData({...editFormData, apellido: e.target.value})}
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Rol a asignar</Label>
-                <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AppRole)}>
+                <Label htmlFor="edit-email">Correo Electrónico</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Rol del Sistema</Label>
+                <Select
+                  value={editFormData.role}
+                  onValueChange={(v) => setEditFormData({...editFormData, role: v as AppRole})}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -377,7 +403,7 @@ export function UserManagement() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {roleDescriptions[selectedRole]}
+                  {roleDescriptions[editFormData.role]}
                 </p>
               </div>
             </div>
@@ -386,8 +412,8 @@ export function UserManagement() {
             <Button variant="outline" onClick={() => setEditingUser(null)}>
               Cancelar
             </Button>
-            <Button onClick={handleAssignRole}>
-              Guardar Rol
+            <Button onClick={handleUpdateUser}>
+              Guardar Cambios
             </Button>
           </DialogFooter>
         </DialogContent>

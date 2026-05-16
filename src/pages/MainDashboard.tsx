@@ -9,7 +9,8 @@ import {
   Map,
   Keyboard,
   AlertTriangle,
-  Siren
+  Siren,
+  RefreshCw
 } from 'lucide-react';
 import {
   Popover,
@@ -31,6 +32,7 @@ import { FocusModePanel } from '@/components/dashboard/FocusModePanel';
 import { IncidentMap } from '@/components/maps/IncidentMap';
 import { useMunicipality } from '@/context/MunicipalityContext';
 import type { Alert, MapCamera } from '@/types';
+import { toast as sonnerToast } from 'sonner';
 
 const alertTypeLabels: Record<string, string> = {
   antipanico: 'Alerta Antipánico',
@@ -67,13 +69,22 @@ export default function Dashboard() {
   const [focusMode, setFocusMode] = useState(false);
   const [showAllCameras, setShowAllCameras] = useState(false);
 
-  // 1. DEFINIR mapCenter PRIMERO (Para evitar ReferenceError)
+  // 1. DEFINIR mapCenter dinámico con respaldo inteligente
   const mapCenter = useMemo(() => {
-    if (selectedMunicipality?.latitude && selectedMunicipality?.longitude) {
-      return { lat: Number(selectedMunicipality.latitude), lng: Number(selectedMunicipality.longitude) };
+    const lat = Number(selectedMunicipality?.latitude);
+    const lng = Number(selectedMunicipality?.longitude);
+
+    if (lat && lng && lat !== 0) {
+      return { lat, lng };
     }
-    if (selectedMunicipality?.name?.includes("Calafate")) return { lat: -50.3408, lng: -72.2711 };
-    if (selectedMunicipality?.name?.includes("Ushuaia")) return { lat: -54.8019, lng: -68.3030 };
+
+    // Respaldo por nombre si la base de datos aún no devolvió coordenadas (UX de emergencia)
+    const name = (selectedMunicipality?.name || '').toLowerCase();
+    if (name.includes("calafate")) return { lat: -50.3408, lng: -72.2711 };
+    if (name.includes("caleta olivia")) return { lat: -46.4389, lng: -67.5192 };
+    if (name.includes("ushuaia")) return { lat: -54.8019, lng: -68.3030 };
+
+    // Default: Río Gallegos
     return { lat: -51.6226, lng: -69.2181 };
   }, [selectedMunicipality]);
 
@@ -95,6 +106,7 @@ export default function Dashboard() {
       address: c.address,
       is_active: true,
       code: c.code,
+      feed_url: c.feed_url
     })), [cameras]);
 
   const handleNewAlert = useCallback((alert: Alert) => {
@@ -218,6 +230,31 @@ export default function Dashboard() {
     { key: 'Escape', action: handleEscape, description: 'Cerrar / Deseleccionar' },
   ], [handleTakeNextCritical, handleResolveAlert, handleToggleMap, handleEscape]);
 
+  const handleSimulate = async () => {
+    if (!selectedMunicipality) return;
+    const confirm = window.confirm('¿Quieres resetear el historial y generar nuevas alertas de prueba perfectas?');
+    if (!confirm) return;
+
+    try {
+      const baseUrl = `http://${window.location.hostname}:3001`;
+      const res = await fetch(`${baseUrl}/api/simulation/reset-and-generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ municipalityId: selectedMunicipality.id })
+      });
+
+      if (res.ok) {
+        sonnerToast.success('¡Simulación Exitosa! El sistema ha sido reseteado.');
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        const err = await res.json();
+        sonnerToast.error(err.error || 'Error en el servidor de simulación');
+      }
+    } catch (e) {
+      sonnerToast.error('Error crítico: El servidor no responde en el puerto 3001');
+    }
+  };
+
   useKeyboardShortcuts();
 
   const operatorsList = useMemo(() =>
@@ -255,6 +292,15 @@ export default function Dashboard() {
                   Mapa de Incidentes
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSimulate}
+                    className="h-8 text-[10px] font-bold bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    SIMULAR ALERTAS
+                  </Button>
                   <div className="flex items-center gap-2 mr-4 bg-slate-100 p-1 rounded-lg border border-slate-200">
                     <span className="text-[10px] font-bold text-slate-500 ml-2">VER TODAS</span>
                     <button

@@ -13,22 +13,22 @@ const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostna
 
 export default function Reports() {
   const { hasPermission } = useAuth();
-  const { activeMunicipality } = useMunicipality();
+  const { selectedMunicipality } = useMunicipality();
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('30');
-  const [alerts, setAlerts] = useState<Array<{ status: string; type: string; severity: string; created_at: string; resolved_at: string | null }>>([]);
+  const [period, setPeriod] = useState<'7' | '30' | '90' | 'all'>('all');
+  const [alerts, setAlerts] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
-  }, [period, activeMunicipality]);
+  }, [selectedMunicipality?.id]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const municipalityParam = activeMunicipality ? `&municipalityId=${activeMunicipality.id}` : '';
-      const response = await fetch(`${API_URL}/api/alerts?period=${period}${municipalityParam}`);
+      const municipalityParam = selectedMunicipality?.id ? `?municipalityId=${selectedMunicipality.id}` : '';
+      const response = await fetch(`${API_URL}/api/alerts${municipalityParam}`);
       const data = await response.json();
-      setAlerts(data || []);
+      setAlerts(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
       toast.error('Error al cargar reportes');
@@ -55,37 +55,6 @@ export default function Reports() {
     return acc;
   }, {} as Record<string, number>);
 
-  // Avg resolution time (minutes)
-  const resolved = alerts.filter(a => a.resolved_at);
-  const avgResolutionMin = resolved.length > 0
-    ? Math.round(resolved.reduce((sum, a) => sum + (new Date(a.resolved_at!).getTime() - new Date(a.created_at).getTime()), 0) / resolved.length / 60000)
-    : 0;
-
-  const handleExport = () => {
-    const rows: (string | number)[][] = [
-      ['Métrica', 'Valor'],
-      ['Total alertas', stats.total],
-      ['Activas', stats.activas],
-      ['En atención', stats.en_atencion],
-      ['Resueltas', stats.resueltas],
-      ['Críticas', stats.criticas],
-      ['Tiempo promedio resolución (min)', avgResolutionMin],
-      [''],
-      ['Por tipo', ''],
-      ...Object.entries(byType).map(([k, v]) => [k, v] as (string | number)[]),
-      [''],
-      ['Por severidad', ''],
-      ...Object.entries(bySeverity).map(([k, v]) => [k, v] as (string | number)[]),
-    ];
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `reporte_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    toast.success('Reporte exportado');
-  };
-
   if (!hasPermission('view_audit')) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -111,22 +80,11 @@ export default function Reports() {
             <BarChart3 className="h-6 w-6 text-primary" />
             Reportes y Estadísticas
           </h1>
-          <p className="text-muted-foreground">Análisis del sistema de monitoreo</p>
+          <p className="text-muted-foreground">Análisis en tiempo real del municipio seleccionado</p>
         </div>
-        <div className="flex gap-2">
-          <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Últimos 7 días</SelectItem>
-              <SelectItem value="30">Últimos 30 días</SelectItem>
-              <SelectItem value="90">Últimos 90 días</SelectItem>
-              <SelectItem value="all">Todo el período</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleExport} disabled={loading}>
-            <Download className="h-4 w-4 mr-2" />Exportar
-          </Button>
-        </div>
+        <Button onClick={fetchData} disabled={loading} variant="outline">
+           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Actualizar
+        </Button>
       </div>
 
       {loading ? (
@@ -136,80 +94,57 @@ export default function Reports() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
+            <Card className="bg-slate-50">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1"><BarChart3 className="h-4 w-4 text-primary" /><span className="text-xs text-muted-foreground">Total</span></div>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground mb-1 uppercase font-bold">Total</p>
+                <p className="text-3xl font-black">{stats.total}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-rose-50 border-rose-100">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1"><AlertTriangle className="h-4 w-4 text-destructive" /><span className="text-xs text-muted-foreground">Activas</span></div>
-                <p className="text-2xl font-bold text-destructive">{stats.activas}</p>
+                <p className="text-xs text-rose-600 mb-1 uppercase font-bold">Activas</p>
+                <p className="text-3xl font-black text-rose-700">{stats.activas}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-amber-50 border-amber-100">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1"><Clock className="h-4 w-4 text-amber-500" /><span className="text-xs text-muted-foreground">En atención</span></div>
-                <p className="text-2xl font-bold text-amber-600">{stats.en_atencion}</p>
+                <p className="text-xs text-amber-600 mb-1 uppercase font-bold">En atención</p>
+                <p className="text-3xl font-black text-amber-700">{stats.en_atencion}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-emerald-50 border-emerald-100">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1"><CheckCircle2 className="h-4 w-4 text-green-500" /><span className="text-xs text-muted-foreground">Resueltas</span></div>
-                <p className="text-2xl font-bold text-green-600">{stats.resueltas}</p>
+                <p className="text-xs text-emerald-600 mb-1 uppercase font-bold">Resueltas</p>
+                <p className="text-3xl font-black text-emerald-700">{stats.resueltas}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="bg-blue-50 border-blue-100">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1"><TrendingUp className="h-4 w-4 text-primary" /><span className="text-xs text-muted-foreground">Tiempo prom.</span></div>
-                <p className="text-2xl font-bold">{avgResolutionMin}m</p>
+                <p className="text-xs text-blue-600 mb-1 uppercase font-bold">Críticas</p>
+                <p className="text-3xl font-black text-blue-700">{stats.criticas}</p>
               </CardContent>
             </Card>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Por Tipo de Alerta</CardTitle>
-                <CardDescription>Distribución de incidentes</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Object.entries(byType).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin datos</p>
-                ) : Object.entries(byType).map(([type, count]) => (
+              <CardHeader><CardTitle>Distribución por Tipo</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {Object.entries(byType).map(([type, count]) => (
                   <div key={type}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="capitalize">{type}</span>
-                      <span className="font-medium">{count}</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${(count / maxType) * 100}%` }} />
-                    </div>
+                    <div className="flex justify-between text-xs font-bold mb-1 uppercase"><span>{type}</span><span>{count}</span></div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-600" style={{ width: `${(count / maxType) * 100}%` }} /></div>
                   </div>
                 ))}
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader>
-                <CardTitle>Por Severidad</CardTitle>
-                <CardDescription>Nivel de criticidad</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Object.entries(bySeverity).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Sin datos</p>
-                ) : Object.entries(bySeverity).map(([sev, count]) => (
+              <CardHeader><CardTitle>Nivel de Severidad</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {Object.entries(bySeverity).map(([sev, count]) => (
                   <div key={sev}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="capitalize flex items-center gap-2">
-                        <Badge variant={sev === 'critica' ? 'destructive' : 'outline'} className="text-[10px]">{sev}</Badge>
-                      </span>
-                      <span className="font-medium">{count}</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className={`h-full ${sev === 'critica' ? 'bg-destructive' : 'bg-primary'}`} style={{ width: `${(count / maxSev) * 100}%` }} />
-                    </div>
+                    <div className="flex justify-between text-xs font-bold mb-1 uppercase"><span>{sev}</span><span>{count}</span></div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full ${sev === 'critica' ? 'bg-rose-600' : 'bg-indigo-400'}`} style={{ width: `${(count / maxSev) * 100}%` }} /></div>
                   </div>
                 ))}
               </CardContent>
@@ -219,4 +154,10 @@ export default function Reports() {
       )}
     </div>
   );
+}
+
+function RefreshCw(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" ><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+  )
 }

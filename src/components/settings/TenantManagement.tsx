@@ -58,7 +58,8 @@ interface Tenant {
   alertCount?: number;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
+const rawUrl = import.meta.env.VITE_API_URL || '';
+const API_URL = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
 
 export function TenantManagement() {
   const { user: currentUser } = useAuth();
