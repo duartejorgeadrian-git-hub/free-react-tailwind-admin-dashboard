@@ -53,7 +53,7 @@ export function MunicipalitySettings() {
 
   const targetMunicipalityId = (role === 'superadmin' || role === 'admin')
     ? selectedMunicipality?.id
-    : profile?.municipalityId;
+    : (profile?.municipalityId || (profile as any)?.municipality_id);
 
   const [config, setConfig] = useState<MunicipalityConfig>({
     name: '',
