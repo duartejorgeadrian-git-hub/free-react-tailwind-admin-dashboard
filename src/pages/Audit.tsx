@@ -11,18 +11,24 @@ import { toast } from 'sonner';
 const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
 
 export default function Audit() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAuditLog();
-  }, []);
+    if (user?.id) {
+      fetchAuditLog();
+    }
+  }, [user?.id]);
 
   const fetchAuditLog = async () => {
+    if (!user?.id) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/audit?_=${Date.now()}`);
+      const headers: any = {
+        'x-user-id': user.id
+      };
+      const response = await fetch(`${API_URL}/api/audit?_=${Date.now()}`, { headers });
       const data = await response.json();
       setEntries(Array.isArray(data) ? data : []);
     } catch (error) {
