@@ -73,9 +73,13 @@ export const apiService = {
     }
   },
 
-  async getUsers(): Promise<any[]> {
+  async getUsers(currentUserId?: string): Promise<any[]> {
     try {
-      const response = await fetch(`${API_URL}/api/users`);
+      const headers: any = {};
+      if (currentUserId) {
+        headers['x-user-id'] = currentUserId;
+      }
+      const response = await fetch(`${API_URL}/api/users`, { headers });
       if (!response.ok) throw new Error('Error al cargar usuarios');
       return await response.json();
     } catch (error) {

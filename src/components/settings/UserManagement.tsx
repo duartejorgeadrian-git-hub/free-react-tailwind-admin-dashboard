@@ -130,7 +130,7 @@ export function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const data = await apiService.getUsers();
+      const data = await apiService.getUsers(currentUser?.id);
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -232,9 +232,27 @@ export function UserManagement() {
     return matchesSearch && matchesRole;
   });
 
-  const availableRoles: AppRole[] = hasAnyRole(['superadmin'])
-    ? ['operador', 'supervisor', 'auditor', 'director', 'admin_municipal', 'superadmin', 'soporte']
-    : ['operador', 'supervisor', 'auditor'];
+  const roleWeights: Record<string, number> = {
+    superadmin: 100,
+    admin_municipal: 80,
+    director: 70,
+    supervisor: 60,
+    auditor: 50,
+    operador: 40,
+    soporte: 30,
+    citizen: 0
+  };
+
+  const currentRoleWeight = roleWeights[currentRole || ''] || 40;
+
+  const availableRoles: AppRole[] = (['operador', 'supervisor', 'auditor', 'director', 'admin_municipal', 'superadmin', 'soporte'] as AppRole[])
+    .filter(role => {
+      // Un usuario solo puede asignar roles que sean iguales o menores a su propio nivel,
+      // y solo el superadmin puede asignar roles superadmin/soporte.
+      const targetWeight = roleWeights[role] || 0;
+      if (role === 'superadmin') return currentRole === 'superadmin';
+      return targetWeight <= currentRoleWeight;
+    });
 
   const getInitials = (nombre?: string, apellido?: string) => {
     const n = nombre?.[0] || '';
