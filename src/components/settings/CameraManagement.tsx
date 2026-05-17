@@ -66,11 +66,11 @@ interface MunicipalityItem {
 }
 
 // Leaflet helper to handle center updates programmatically
-function MapController({ center }: { center: [number, number] }) {
+function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.flyTo(center, 13, { duration: 1.2 });
-  }, [center, map]);
+    map.flyTo(center, zoom, { duration: 1.5 });
+  }, [center, zoom, map]);
   return null;
 }
 
@@ -118,6 +118,7 @@ export function CameraManagement() {
 
   // Referencia para centrar mapa en geolocalización
   const [mapCenter, setMapCenter] = useState<[number, number]>([-51.6226, -69.2181]);
+  const [mapZoom, setMapZoom] = useState<number>(13);
 
   // Cargar lista de municipios (sólo para superadmin)
   useEffect(() => {
@@ -132,6 +133,7 @@ export function CameraManagement() {
           const current = data.find((m: any) => m.id === selectedMuniId);
           if (current?.latitude && current?.longitude) {
             setMapCenter([Number(current.latitude), Number(current.longitude)]);
+            setMapZoom(13);
           }
         }
       } catch (err) {
@@ -175,6 +177,7 @@ export function CameraManagement() {
       const current = municipalities.find(m => m.id === selectedMuniId);
       if (current?.latitude && current?.longitude) {
         setMapCenter([Number(current.latitude), Number(current.longitude)]);
+        setMapZoom(13); // Restablecer a zoom municipal amplio
       }
     }
   }, [selectedMuniId, municipalities]);
@@ -320,6 +323,7 @@ export function CameraManagement() {
   // Geolocalizar en el Mapa (Centrar mapa en la cámara)
   const handleGeolocateCamera = (camera: CameraItem) => {
     setMapCenter([camera.latitude, camera.longitude]);
+    setMapZoom(17); // Zoom dinámico de primer plano para la cámara
     toast.info(`Centrando mapa en: ${camera.name}`);
   };
 
@@ -480,7 +484,7 @@ export function CameraManagement() {
                 );
               })}
 
-              <MapController center={mapCenter} />
+              <MapController center={mapCenter} zoom={mapZoom} />
               <MapClickEvents 
                 enabled={isClickToAddMode} 
                 onMapClick={(lat, lng) => {
