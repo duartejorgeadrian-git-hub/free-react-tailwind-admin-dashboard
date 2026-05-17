@@ -107,21 +107,9 @@ export const IncidentMap = ({
   className,
   center
 }: IncidentMapProps) => {
-  const { toast } = useToast();
-  const { role } = useAuth();
   // Default center: Río Gallegos, Santa Cruz
   const defaultCenter: [number, number] = [-51.6226, -69.2181];
   const [fiberLayers, setFiberLayers] = useState<FiberLayer[]>([]);
-  const [isEditingCameras, setIsEditingCameras] = useState(false);
-  const [localCameras, setLocalCameras] = useState<MapCamera[]>(cameras);
-
-  // Actualizar cámaras locales cuando cambian las props
-  useEffect(() => {
-    setLocalCameras(cameras);
-  }, [cameras]);
-
-  // Solo el superadmin puede editar cámaras
-  const canEdit = role === 'superadmin';
 
   useEffect(() => {
     fetch('/fiber_layers.json')
@@ -129,41 +117,6 @@ export const IncidentMap = ({
       .then(data => setFiberLayers(data))
       .catch(err => console.error('Error loading fiber layers:', err));
   }, []);
-
-  const handleCameraMove = useCallback(async (cameraId: string, newLat: number, newLng: number) => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3001`;
-      const response = await fetch(`${apiUrl}/api/cameras/${cameraId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude: newLat, longitude: newLng })
-      });
-
-      if (response.ok) {
-        // Actualizar estado local para que el marcador se quede en la nueva posición
-        setLocalCameras(prevCameras =>
-          prevCameras.map(cam =>
-            cam.id === cameraId
-              ? { ...cam, latitude: newLat, longitude: newLng }
-              : cam
-          )
-        );
-
-        toast({
-          title: "Ubicación actualizada",
-          description: "La posición de la cámara se guardó correctamente.",
-        });
-      } else {
-        throw new Error('Error al actualizar');
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo guardar la nueva ubicación.",
-        variant: "destructive"
-      });
-    }
-  }, [toast]);
 
   return (
     <div className={`relative rounded-xl overflow-hidden border border-slate-200 z-0 ${className}`}>
@@ -178,30 +131,6 @@ export const IncidentMap = ({
           to { transform: translateY(-5px); }
         }
       `}</style>
-
-      {/* Control de Edición - Solo visible para Superadmin */}
-      {canEdit && (
-        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-          <Button
-            variant={isEditingCameras ? "destructive" : "secondary"}
-            size="sm"
-            className="shadow-md font-bold"
-            onClick={() => setIsEditingCameras(!isEditingCameras)}
-          >
-            {isEditingCameras ? (
-              <><Lock className="w-4 h-4 mr-2" /> BLOQUEAR MAPA</>
-            ) : (
-              <><Unlock className="w-4 h-4 mr-2" /> EDITAR CÁMARAS</>
-            )}
-          </Button>
-          {isEditingCameras && (
-            <div className="bg-amber-100 text-amber-800 text-[10px] p-2 rounded border border-amber-300 shadow-sm animate-in slide-in-from-left-2">
-              <strong>MODO EDICIÓN ACTIVO:</strong><br />
-              Arrastra los puntos naranjas para<br />corregir la ubicación.
-            </div>
-          )}
-        </div>
-      )}
 
       <MapContainer
         center={defaultCenter} 
@@ -250,7 +179,7 @@ export const IncidentMap = ({
 
           <LayersControl.Overlay checked name="Cámaras de Seguridad">
             <LayerGroup>
-              {localCameras.map(camera => {
+              {cameras.map(camera => {
                 const lat = Number(camera.latitude);
                 const lng = Number(camera.longitude);
 
@@ -260,28 +189,14 @@ export const IncidentMap = ({
                   <Marker
                     key={camera.id}
                     position={[lat, lng]}
-                    icon={isEditingCameras ? cameraEditIcon : cameraIcon}
-                    draggable={isEditingCameras}
-                    eventHandlers={{
-                      dragend: (e) => {
-                        const marker = e.target;
-                        const position = marker.getLatLng();
-                        handleCameraMove(camera.id, position.lat, position.lng);
-                      },
-                    }}
+                    icon={cameraIcon}
+                    draggable={false}
                   >
                     <Popup>
                       <div className="text-xs">
                         <p className="font-bold">{camera.name}</p>
                         <p className="text-slate-500">{camera.address || 'Sin dirección'}</p>
-                        {isEditingCameras && (
-                          <div className="mt-2 text-amber-600 font-bold flex items-center gap-1">
-                            <Save className="w-3 h-3" /> Arrastra para mover
-                          </div>
-                        )}
-                        {!isEditingCameras && (
-                          <div className="mt-1 px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] inline-block font-semibold">CÁMARA</div>
-                        )}
+                        <div className="mt-1 px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] inline-block font-semibold">CÁMARA</div>
                       </div>
                     </Popup>
                   </Marker>

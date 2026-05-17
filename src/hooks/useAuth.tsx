@@ -153,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateAuthData = (data: { user?: any; profile?: any; role?: AppRole }) => {
     const savedAuth = localStorage.getItem('auth_session');
-    let session = savedAuth ? JSON.parse(savedAuth) : {};
+    const session = savedAuth ? JSON.parse(savedAuth) : {};
 
     if (data.user) {
       setUser(data.user);

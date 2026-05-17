@@ -6,12 +6,14 @@ import {
   Users,
   Building2,
   Shield,
-  Palette
+  Palette,
+  Camera
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserManagement } from '@/components/settings/UserManagement';
 import { TenantManagement } from '@/components/settings/TenantManagement';
 import { MunicipalitySettings } from '@/components/settings/MunicipalitySettings';
+import { CameraManagement } from '@/components/settings/CameraManagement';
 
 export default function Settings() {
   const { hasPermission, hasAnyRole, role: _role } = useAuth();
@@ -58,7 +60,7 @@ export default function Settings() {
           Configuración del Sistema
         </h1>
         <p className="text-muted-foreground">
-          Administración de usuarios, tenants y configuración general
+          Administración de usuarios, tenants, cámaras y configuración general
         </p>
       </div>
 
@@ -83,6 +85,12 @@ export default function Settings() {
               Municipio
             </TabsTrigger>
           )}
+          {canManageConfig && (
+            <TabsTrigger value="cameras" className="flex items-center gap-2">
+              <Camera className="h-4 w-4" />
+              Cámaras
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {canManageUsers && (
@@ -100,6 +108,12 @@ export default function Settings() {
         {canManageConfig && (
           <TabsContent value="municipality">
             <MunicipalitySettings />
+          </TabsContent>
+        )}
+
+        {canManageConfig && (
+          <TabsContent value="cameras">
+            <CameraManagement />
           </TabsContent>
         )}
       </Tabs>
