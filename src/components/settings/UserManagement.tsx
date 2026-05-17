@@ -100,7 +100,12 @@ export function UserManagement() {
   const isSuperadmin = hasAnyRole(['superadmin', 'admin_municipal']);
 
   useEffect(() => {
-    fetchUsers();
+    if (currentUser?.id) {
+      fetchUsers();
+    }
+  }, [currentUser?.id]);
+
+  useEffect(() => {
     fetchMunicipalities();
   }, []);
 
@@ -215,6 +220,11 @@ export function UserManagement() {
   };
 
   const filteredUsers = users.filter(user => {
+    // Los administradores municipales no deben ver al usuario super admin
+    if (currentRole !== 'superadmin' && user.role === 'superadmin') {
+      return false;
+    }
+
     const searchLower = searchQuery.toLowerCase();
     const username = user.username || '';
     const nombre = user.nombre || '';
