@@ -83,22 +83,10 @@ export function AppSidebar() {
       show: hasPermission('view_audit'),
     },
     { 
-      title: 'Usuarios', 
-      url: '/usuarios', 
-      icon: Users,
-      show: hasPermission('manage_users'),
-    },
-    { 
       title: 'Configuración', 
       url: '/configuracion', 
       icon: Settings,
-      show: hasPermission('manage_config'),
-    },
-    { 
-      title: 'Tenants', 
-      url: '/tenants', 
-      icon: Building2,
-      show: hasPermission('manage_tenants'),
+      show: hasPermission('manage_config') || hasPermission('manage_users') || hasPermission('manage_tenants'),
     },
   ].filter(item => item.show);
 

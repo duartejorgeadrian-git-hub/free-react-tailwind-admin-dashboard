@@ -32,6 +32,7 @@ interface UserWithRole {
   email: string | null;
   dni?: string;
   telefono?: string;
+  municipality_id?: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -56,11 +57,20 @@ const roleDescriptions: Record<string, string> = {
 
 // Se usa apiService para evitar problemas de IP mal formada
 export function UserManagement() {
-  const { hasAnyRole, user: currentUser, refreshProfile } = useAuth();
+  const { hasAnyRole, user: currentUser, refreshProfile, profile, role: currentRole } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+
+  interface MunicipalityItem {
+    id: string;
+    name: string;
+    code: string;
+  }
+  const [municipalities, setMunicipalities] = useState<MunicipalityItem[]>([]);
+
+  const isGlobalSuperadmin = currentRole === 'superadmin';
 
   // Estado para Diálogo de Edición
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
@@ -68,7 +78,8 @@ export function UserManagement() {
     nombre: '',
     apellido: '',
     email: '',
-    role: 'operador' as AppRole
+    role: 'operador' as AppRole,
+    municipality_id: ''
   });
 
   // Estado para Diálogo de Creación
@@ -82,14 +93,39 @@ export function UserManagement() {
     dni: '',
     email: '',
     telefono: '',
-    role: 'operador' as AppRole
+    role: 'operador' as AppRole,
+    municipality_id: ''
   });
 
   const isSuperadmin = hasAnyRole(['superadmin', 'admin_municipal']);
 
   useEffect(() => {
     fetchUsers();
+    fetchMunicipalities();
   }, []);
+
+  // Autofill municipality for non-global-superadmin
+  useEffect(() => {
+    if (!isGlobalSuperadmin && profile) {
+      const muniId = profile.municipalityId || (profile as any).municipality_id || '';
+      setFormData(prev => ({ ...prev, municipality_id: muniId }));
+      setEditFormData(prev => ({ ...prev, municipality_id: muniId }));
+    }
+  }, [isGlobalSuperadmin, profile]);
+
+  const fetchMunicipalities = async () => {
+    try {
+      const rawUrl = import.meta.env.VITE_API_URL || '';
+      const API_URL = (rawUrl.split(' ')[0] || `http://${window.location.hostname}:3001`).trim();
+      const response = await fetch(`${API_URL}/api/tenants`);
+      if (response.ok) {
+        const data = await response.json();
+        setMunicipalities(data);
+      }
+    } catch (err) {
+      console.error('Error fetching municipalities:', err);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -128,7 +164,8 @@ export function UserManagement() {
       setIsCreateDialogOpen(false);
       setFormData({
         username: '', password: '', nombre: '', apellido: '',
-        dni: '', email: '', telefono: '', role: 'operador'
+        dni: '', email: '', telefono: '', role: 'operador',
+        municipality_id: ''
       });
       fetchUsers();
     } catch (error: any) {
@@ -284,13 +321,18 @@ export function UserManagement() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium truncate">
                             {user.nombre} {user.apellido}
                           </p>
                           {!user.isActive && user.isActive !== undefined && (
                             <Badge variant="outline" className="text-muted-foreground">
                               Inactivo
+                            </Badge>
+                          )}
+                          {user.municipality_id && municipalities.find(m => m.id === user.municipality_id) && (
+                            <Badge variant="outline" className="text-[10px] text-indigo-600 border-indigo-200 bg-indigo-50/55 font-semibold py-0 px-1.5 flex items-center gap-0.5 shrink-0">
+                              🏙️ {municipalities.find(m => m.id === user.municipality_id)?.name}
                             </Badge>
                           )}
                         </div>
@@ -318,7 +360,8 @@ export function UserManagement() {
                               nombre: user.nombre || '',
                               apellido: user.apellido || '',
                               email: user.email || '',
-                              role: user.role || 'operador'
+                              role: user.role || 'operador',
+                              municipality_id: user.municipality_id || ''
                             });
                           }}
                         >
@@ -406,6 +449,28 @@ export function UserManagement() {
                   {roleDescriptions[editFormData.role]}
                 </p>
               </div>
+
+              {isGlobalSuperadmin && editFormData.role !== 'superadmin' && (
+                <div className="space-y-2">
+                  <Label>Municipio / Jurisdicción</Label>
+                  <Select
+                    value={editFormData.municipality_id || 'none'}
+                    onValueChange={(v) => setEditFormData({...editFormData, municipality_id: v === 'none' ? '' : v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione el municipio asignado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguno (Acceso Global / Soporte)</SelectItem>
+                      {municipalities.map((muni) => (
+                        <SelectItem key={muni.id} value={muni.id}>
+                          {muni.name} ({muni.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -504,6 +569,28 @@ export function UserManagement() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {isGlobalSuperadmin && formData.role !== 'superadmin' && (
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="municipality">Municipio / Jurisdicción <span className="text-rose-500">*</span></Label>
+                  <Select
+                    value={formData.municipality_id || 'none'}
+                    onValueChange={(v) => setFormData({...formData, municipality_id: v === 'none' ? '' : v})}
+                  >
+                    <SelectTrigger id="municipality">
+                      <SelectValue placeholder="Seleccione el municipio asignado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Ninguno (Acceso Global / Soporte)</SelectItem>
+                      {municipalities.map((muni) => (
+                        <SelectItem key={muni.id} value={muni.id}>
+                          {muni.name} ({muni.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>

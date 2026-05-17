@@ -61,8 +61,8 @@ export default function App() {
                   <Route path="/historial" element={<ProtectedRoute><History /></ProtectedRoute>} />
                   <Route path="/reportes" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                   <Route path="/auditoria" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
-                  <Route path="/usuarios" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/tenants" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/usuarios" element={<Navigate to="/configuracion" replace />} />
+                  <Route path="/tenants" element={<Navigate to="/configuracion" replace />} />
                   <Route path="/configuracion" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
                   <Route path="*" element={<NotFound />} />
