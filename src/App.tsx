@@ -40,6 +40,36 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 
+function PermissionRoute({ children, permission }: { children: React.ReactNode; permission: string }) {
+  const { user, loading, hasPermission } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!hasPermission(permission)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <DashboardLayout>{children}</DashboardLayout>;
+}
+
+function DashboardRoute() {
+  const { role } = useAuth();
+  if (role === 'auditor') {
+    return <Navigate to="/auditoria" replace />;
+  }
+  return <Dashboard />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -55,15 +85,15 @@ export default function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
 
-                  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="/alertas" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
-                  <Route path="/ciudadanos" element={<ProtectedRoute><Citizens /></ProtectedRoute>} />
-                  <Route path="/historial" element={<ProtectedRoute><History /></ProtectedRoute>} />
-                  <Route path="/reportes" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                  <Route path="/auditoria" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
+                  <Route path="/" element={<ProtectedRoute><DashboardRoute /></ProtectedRoute>} />
+                  <Route path="/alertas" element={<PermissionRoute permission="view_alerts"><Alerts /></PermissionRoute>} />
+                  <Route path="/ciudadanos" element={<PermissionRoute permission="view_citizen_profile"><Citizens /></PermissionRoute>} />
+                  <Route path="/historial" element={<PermissionRoute permission="view_alerts"><History /></PermissionRoute>} />
+                  <Route path="/reportes" element={<PermissionRoute permission="view_reports"><Reports /></PermissionRoute>} />
+                  <Route path="/auditoria" element={<PermissionRoute permission="view_audit"><Audit /></PermissionRoute>} />
                   <Route path="/usuarios" element={<Navigate to="/configuracion" replace />} />
                   <Route path="/tenants" element={<Navigate to="/configuracion" replace />} />
-                  <Route path="/configuracion" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/configuracion" element={<PermissionRoute permission="manage_config"><Settings /></PermissionRoute>} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

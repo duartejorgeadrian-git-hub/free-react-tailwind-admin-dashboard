@@ -47,7 +47,7 @@ export function AppSidebar() {
       title: 'Centro de Monitoreo', 
       url: '/', 
       icon: LayoutDashboard,
-      show: true,
+      show: role !== 'auditor',
     },
     { 
       title: 'Alertas Activas', 
@@ -74,7 +74,7 @@ export function AppSidebar() {
       title: 'Reportes', 
       url: '/reportes', 
       icon: BarChart3,
-      show: hasPermission('view_audit'),
+      show: hasPermission('view_reports'),
     },
     { 
       title: 'Auditoría', 
